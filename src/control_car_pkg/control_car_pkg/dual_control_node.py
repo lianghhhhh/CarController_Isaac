@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 from rclpy.node import Node
@@ -26,14 +27,15 @@ class DualControlNode(Node):
 
     def init_model(self):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        home_dir = os.path.expanduser('~')
 
         vel_predictor = VelPredictor()
-        vel_predictor.load_state_dict(torch.load('/home/liangh/car_data_collect/new_vel_model.pth'))
+        vel_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model.pth')))
         vel_predictor.to(device)
         vel_predictor.eval()
 
         car_predictor = CarPredictor()
-        car_predictor.load_state_dict(torch.load('/home/liangh/car_data_collect/new_model.pth'))
+        car_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_model.pth')))
         car_predictor.to(device)
         car_predictor.eval()
 

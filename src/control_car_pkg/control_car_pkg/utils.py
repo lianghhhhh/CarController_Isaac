@@ -20,7 +20,8 @@ def preprocess_data(data):
 
     data = data[0:2] + [local_dx, local_dy, d_angle]
 
-    # scaler = joblib.load('/home/liangh/car_data_collect/input_scaler.save')
+    # home_dir = os.path.expanduser('~')
+    # scaler = joblib.load(os.path.join(home_dir, 'CarController_Isaac', 'input_scaler.save'))
     # data = np.array(data).reshape(1, -1)
     # data = scaler.transform(data)
     return np.array(data).reshape(1, -1)
@@ -41,7 +42,8 @@ def calActualState(pos_x, pos_y, angle, delta_state):
     return [new_x, new_y, new_angle]
 
 def denormalize(data):
-    scaler = joblib.load('/home/liangh/car_data_collect/output_scaler.save')
+    home_dir = os.path.expanduser('~')
+    scaler = joblib.load(os.path.join(home_dir, 'CarController_Isaac', 'output_scaler.save'))
     data = np.array(data).reshape(1, -1)
     data = scaler.inverse_transform(data)
     return data.flatten().tolist()

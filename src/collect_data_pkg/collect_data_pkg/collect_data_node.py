@@ -1,3 +1,4 @@
+import os
 import csv
 import numpy as np
 from rclpy.node import Node
@@ -11,7 +12,8 @@ class CollectDataNode(Node):
         self.target_vel_node = target_vel_node
         self.get_logger().info('CollectDataNode has been started.')
 
-        self.filepath = '/home/liangh/car_data_collect/carData.csv'
+        home_dir = os.path.expanduser('~')
+        self.filepath = os.path.join(home_dir, 'CarController_Isaac', 'carData.csv')
         with open(self.filepath, mode='w', newline='') as file:
             writer = csv.writer(file)
             header = [

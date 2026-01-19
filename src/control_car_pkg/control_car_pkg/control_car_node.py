@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 from rclpy.node import Node
@@ -16,7 +17,23 @@ class ControlCarNode(Node):
         self.rear_wheel_pub = self.create_publisher(Float64MultiArray, "car_C_rear_wheel", 10)
         self.front_wheel_pub = self.create_publisher(Float64MultiArray, "car_C_front_wheel", 10)
 
+        self.vel_predictor = None
+        self.device = None
+
+        self.init_model()
         self.timer = self.create_timer(0.05, self.control_car_callback)  # 20 Hz
+
+    def init_model(self):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        home_dir = os.path.expanduser('~')
+
+        vel_predictor = VelPredictor()
+        vel_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model.pth')))
+        vel_predictor.to(device)
+        vel_predictor.eval()
+
+        self.vel_predictor = vel_predictor
+        self.device = device
 
     def control_car_callback(self):
         position = self.car_state_node.position
@@ -61,15 +78,10 @@ class ControlCarNode(Node):
             self.get_logger().info(f'Current data: {data}')
             data = preprocess_data(data)
 
-            model = VelPredictor()
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            model.load_state_dict(torch.load('/home/liangh/car_data_collect/new_vel_model.pth'))
-            model.to(device)
-            model.eval()
-            input_tensor = torch.tensor(data, dtype=torch.float32).to(device)
+            input_tensor = torch.tensor(data, dtype=torch.float32).to(self.device)
 
             with torch.no_grad():
-                predicted_vel = model(input_tensor)
+                predicted_vel = self.vel_predictor(input_tensor)
             predicted_vel = predicted_vel.detach().cpu().numpy().flatten().tolist()
 
             # predicted_vel = denormalize(predicted_vel)
