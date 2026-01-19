@@ -85,6 +85,7 @@ class ControlCarNode(Node):
             predicted_vel = predicted_vel.detach().cpu().numpy().flatten().tolist()
 
             # predicted_vel = denormalize(predicted_vel)
+            predicted_vel = [float(v)*(-1.0) for v in predicted_vel] # Invert velocity direction
 
             msg = Float64MultiArray()
             msg.data = predicted_vel
@@ -93,10 +94,14 @@ class ControlCarNode(Node):
             self.get_logger().info(f'Published predicted velocities: {predicted_vel}')
 
     def compute_angle(self, qx, qy, qz, qw):
-        # Convert quaternion to Euler angles (roll, pitch, yaw)
+        # Convert quaternion to yaw angle in radians
         siny_cosp = 2 * (qw * qz + qx * qy)
         cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
         radian = np.arctan2(siny_cosp, cosy_cosp)
-        # angle = np.degrees(radian)
-
+        
+        # Flip orientation by 180 degrees
+        radian = radian + np.pi
+        if radian > np.pi:
+            radian -= 2 * np.pi
+        
         return radian
