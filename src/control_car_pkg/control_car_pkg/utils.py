@@ -8,17 +8,25 @@ from sklearn.preprocessing import MinMaxScaler
 
 def preprocess_data(data):
     current_pos = data[2:5]  # pos_x, pos_y, angle
-    target_pos = data[5:7]   # target_x, target_y
-    
-    delta_x = target_pos[0] - current_pos[0]
-    delta_y = target_pos[1] - current_pos[1]
-    d_angle = data[7] # already calculate as error angle in radians
-    d_angle = (d_angle + np.pi) % (2 * np.pi) - np.pi  # normalize to [-pi, pi]
+    temp_data = []
 
-    local_dx = (delta_x * np.cos(-current_pos[2]) - delta_y * np.sin(-current_pos[2]))
-    local_dy = (delta_x * np.sin(-current_pos[2]) + delta_y * np.cos(-current_pos[2]))
+    for i  in range(3):
+        target_pos = data[5 + i*3: 8 + i*3]  # target_x_i, target_y_i, target_angle_i
+        target_pos = data[5:8]   # target_x, target_y, target_angle
+        
+        delta_x = target_pos[0] - current_pos[0]
+        delta_y = target_pos[1] - current_pos[1]
+        d_angle = target_pos[2] # already calculate as error angle in radians
+        d_angle = (d_angle + np.pi) % (2 * np.pi) - np.pi  # normalize to [-pi, pi]
 
-    data = data[0:2] + [local_dx, local_dy, d_angle]
+        local_dx = (delta_x * np.cos(-current_pos[2]) - delta_y * np.sin(-current_pos[2]))
+        local_dy = (delta_x * np.sin(-current_pos[2]) + delta_y * np.cos(-current_pos[2]))
+
+        temp_data.append(local_dx)
+        temp_data.append(local_dy)
+        temp_data.append(d_angle)
+
+    data = data[0:2] + temp_data  # vel_left, vel_right + delta states
 
     # home_dir = os.path.expanduser('~')
     # scaler = joblib.load(os.path.join(home_dir, 'CarController_Isaac', 'input_scaler.save'))

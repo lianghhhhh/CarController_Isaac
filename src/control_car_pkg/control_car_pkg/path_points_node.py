@@ -11,14 +11,17 @@ class PathPointsNode(Node):
             10)
         self.subscription  # prevent unused variable warning
 
-        self.nearest_point = None
+        self.nearest_points = None  # Will hold the nearest path points
         self.get_logger().info('PathPointsNode has been started.')
 
     def path_points_callback(self, msg):
         # Store the received path point
         data = msg.data # [idx, x, y, angle]
-        if len(data) >= 4:
-            self.nearest_point = NearestPoint(x=data[1], y=data[2], angle=data[3])
+        if len(data) >= 10:
+            point_1 = NearestPoint(x=data[1], y=data[2], angle=data[3])
+            point_2 = NearestPoint(x=data[4], y=data[5], angle=data[6])
+            point_3 = NearestPoint(x=data[7], y=data[8], angle=data[9])
+            self.nearest_points = [point_1, point_2, point_3]
         # self.get_logger().info(f'Received Nearest Path Point: {self.nearest_point}')
 
 class NearestPoint:
