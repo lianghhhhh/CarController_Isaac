@@ -10,9 +10,8 @@ def preprocess_data(data):
     current_pos = data[2:5]  # pos_x, pos_y, angle
     temp_data = []
 
-    for i  in range(3):
+    for i in range(3):
         target_pos = data[5 + i*3: 8 + i*3]  # target_x_i, target_y_i, target_angle_i
-        target_pos = data[5:8]   # target_x, target_y, target_angle
         
         delta_x = target_pos[0] - current_pos[0]
         delta_y = target_pos[1] - current_pos[1]
