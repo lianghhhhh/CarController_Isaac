@@ -17,10 +17,11 @@ class CollectDataNode(Node):
         with open(self.filepath, mode='w', newline='') as file:
             writer = csv.writer(file)
             header = [
-                'target_vel_left', 'target_vel_right',
-                'vel_left', 'vel_right',
-                'pos_x', 'pos_y', 'angle',
-                'target_x', 'target_y', 'target_angle'
+                'target_vel_left_front', 'target_vel_right_front',
+                'target_vel_left_rear', 'target_vel_right_rear',
+                'vel_left_front', 'vel_right_front',
+                'vel_left_rear', 'vel_right_rear',
+                'pos_x', 'pos_y', 'angle'
             ]
             writer.writerow(header)
 
@@ -29,26 +30,27 @@ class CollectDataNode(Node):
     def collect_data_callback(self):
         position = self.car_state_node.position
         orientation = self.car_state_node.orientation
-        nearest_point = self.path_points_node.nearest_point
+        # nearest_point = self.path_points_node.nearest_point
         wheel_velocities = self.wheel_vel_node.wheel_velocities
-        target_velocities = self.target_vel_node.target_velocities
+        target_front_vels = self.target_vel_node.target_front_vels
+        target_rear_vels = self.target_vel_node.target_rear_vels
         if not position:
             self.get_logger().warn('Waiting for car state data...')
             return
         if not orientation:
             self.get_logger().warn('Waiting for car state data...')
             return
-        if not nearest_point:
-            self.get_logger().warn('Waiting for path points data...')
-            return
+        # if not nearest_point:
+        #     self.get_logger().warn('Waiting for path points data...')
+        #     return
         if not wheel_velocities:
             self.get_logger().warn('Waiting for wheel velocities data...')
             return
-        if not target_velocities:
+        if not target_front_vels or not target_rear_vels:
             self.get_logger().warn('Waiting for target velocities data...')
             return
 
-        if position and orientation and nearest_point and wheel_velocities and target_velocities:
+        if position and orientation and wheel_velocities and target_front_vels and target_rear_vels:
             self.get_logger().info('Collecting data...')
             pos_x = position.x
             pos_y = position.y
@@ -59,23 +61,28 @@ class CollectDataNode(Node):
                 orientation.w
             )
 
-            target_x = nearest_point.x
-            target_y = nearest_point.y
-            target_angle = nearest_point.angle
+            # target_x = nearest_point.x
+            # target_y = nearest_point.y
+            # target_angle = nearest_point.angle
 
-            vel_left = wheel_velocities.get('Revolute_3', 0.0)
-            vel_right = wheel_velocities.get('Revolute_4', 0.0)
+            vel_left_front = wheel_velocities.get('Revolute_3', 0.0)
+            vel_right_front = wheel_velocities.get('Revolute_4', 0.0)
+            vel_left_rear = wheel_velocities.get('Revolute_1', 0.0)
+            vel_right_rear = wheel_velocities.get('Revolute_2', 0.0)
 
-            target_vel_left = target_velocities[0]  # Assuming index 0 is left wheel
-            target_vel_right = target_velocities[1]  # Assuming index 1 is right wheel
+            target_vel_left_front = target_front_vels[0]  # Assuming index 0 is left front wheel
+            target_vel_right_front = target_front_vels[1]  # Assuming index 1 is right front wheel
+            target_vel_left_rear = target_rear_vels[0]  # Assuming index 0 is left rear wheel
+            target_vel_right_rear = target_rear_vels[1]  # Assuming index 1 is right rear wheel
 
             with open(self.filepath, mode='a', newline='') as file:
                 writer = csv.writer(file)
                 row = [
-                    target_vel_left, target_vel_right,
-                    vel_left, vel_right,
-                    pos_x, pos_y, angle,
-                    target_x, target_y, target_angle
+                    target_vel_left_front, target_vel_right_front,
+                    target_vel_left_rear, target_vel_right_rear,
+                    vel_left_front, vel_right_front,
+                    vel_left_rear, vel_right_rear,
+                    pos_x, pos_y, angle
                 ]
                 writer.writerow(row)
 
