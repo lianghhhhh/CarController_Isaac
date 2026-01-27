@@ -28,7 +28,7 @@ class ControlCarNode(Node):
         home_dir = os.path.expanduser('~')
 
         vel_predictor = VelPredictor()
-        vel_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model_multi.pth')))
+        vel_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model_multi_4vel.pth')))
         vel_predictor.to(device)
         vel_predictor.eval()
 
@@ -71,11 +71,13 @@ class ControlCarNode(Node):
                 target_y.append(point.y)
                 target_angle.append(np.deg2rad(point.angle))
 
-            vel_left = wheel_velocities.get('Revolute_3', 0.0)
-            vel_right = wheel_velocities.get('Revolute_4', 0.0)
+            vel_left_front = wheel_velocities.get('Revolute_3', 0.0)
+            vel_right_front = wheel_velocities.get('Revolute_4', 0.0)
+            vel_left_rear = wheel_velocities.get('Revolute_1', 0.0)
+            vel_right_rear = wheel_velocities.get('Revolute_2', 0.0)
 
             data = [
-                    vel_left, vel_right,
+                    vel_left_front, vel_right_front, vel_left_rear, vel_right_rear,
                     pos_x, pos_y, angle,
                     target_x[0], target_y[0], target_angle[0],
                     target_x[1], target_y[1], target_angle[1],
@@ -94,10 +96,12 @@ class ControlCarNode(Node):
             predicted_vel = [float(v)*(-1.0) for v in predicted_vel] # invert velocity direction
 
             # publish predicted velocities
-            msg = Float64MultiArray()
-            msg.data = predicted_vel
-            self.rear_wheel_pub.publish(msg)
-            self.front_wheel_pub.publish(msg)
+            rear_msg = Float64MultiArray()
+            rear_msg.data = [predicted_vel[2], predicted_vel[3]]  # rear wheel velocities
+            front_msg = Float64MultiArray()
+            front_msg.data = [predicted_vel[0], predicted_vel[1]]  # front wheel velocities
+            self.rear_wheel_pub.publish(rear_msg)
+            self.front_wheel_pub.publish(front_msg)
             self.get_logger().info(f'Published predicted velocities: {predicted_vel}')
 
     def compute_angle(self, qx, qy, qz, qw):

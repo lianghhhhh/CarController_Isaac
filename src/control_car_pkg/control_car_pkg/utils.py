@@ -7,12 +7,11 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 def preprocess_data(data):
-    current_pos = data[2:5]  # pos_x, pos_y, angle
+    current_pos = data[4:7]  # pos_x, pos_y, angle
     temp_data = []
 
-    for i  in range(3):
-        target_pos = data[5 + i*3: 8 + i*3]  # target_x_i, target_y_i, target_angle_i
-        target_pos = data[5:8]   # target_x, target_y, target_angle
+    for i in range(3):
+        target_pos = data[7 + i*3: 10 + i*3]  # target_x_i, target_y_i, target_angle_i
         
         delta_x = target_pos[0] - current_pos[0]
         delta_y = target_pos[1] - current_pos[1]
@@ -26,7 +25,7 @@ def preprocess_data(data):
         temp_data.append(local_dy)
         temp_data.append(d_angle)
 
-    data = data[0:2] + temp_data  # vel_left, vel_right + delta states
+    data = data[0:4] + temp_data  # vel_left_front, vel_right_front, vel_left_rear, vel_right_rear + delta states
 
     # home_dir = os.path.expanduser('~')
     # scaler = joblib.load(os.path.join(home_dir, 'CarController_Isaac', 'input_scaler.save'))
