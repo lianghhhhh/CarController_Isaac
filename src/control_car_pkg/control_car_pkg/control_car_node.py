@@ -19,6 +19,8 @@ class ControlCarNode(Node):
 
         self.vel_predictor = None
         self.device = None
+        self.turn_model = None
+        # self.y_error = 0.0
 
         self.init_model()
         self.timer = self.create_timer(0.05, self.control_car_callback)  # 20 Hz
@@ -28,12 +30,18 @@ class ControlCarNode(Node):
         home_dir = os.path.expanduser('~')
 
         vel_predictor = VelPredictor()
-        vel_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model_multi.pth')))
+        vel_predictor.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model_multi_1_2_2.pth')))
         vel_predictor.to(device)
         vel_predictor.eval()
 
+        turn_model = VelPredictor()
+        turn_model.load_state_dict(torch.load(os.path.join(home_dir, 'CarController_Isaac', 'new_vel_model_multi_1_4_2.pth')))
+        turn_model.to(device)
+        turn_model.eval()
+
         self.vel_predictor = vel_predictor
         self.device = device
+        self.turn_model = turn_model
 
     def control_car_callback(self):
         position = self.car_state_node.position
@@ -74,6 +82,11 @@ class ControlCarNode(Node):
             vel_left = wheel_velocities.get('Revolute_3', 0.0)
             vel_right = wheel_velocities.get('Revolute_4', 0.0)
 
+            check_angle = target_angle[2] + np.pi
+            if check_angle > np.pi:
+                check_angle -= 2 * np.pi
+            is_turn = abs(check_angle) > np.deg2rad(10)  # Check if the angle difference is greater than 10 degrees
+
             data = [
                     vel_left, vel_right,
                     pos_x, pos_y, angle,
@@ -87,7 +100,15 @@ class ControlCarNode(Node):
             input_tensor = torch.tensor(data, dtype=torch.float32).to(self.device)
 
             with torch.no_grad():
-                predicted_vel = self.vel_predictor(input_tensor)
+                if is_turn:
+                    self.get_logger().info('Turning detected, using turn model for prediction.')
+                    predicted_vel = self.turn_model(input_tensor)
+                # elif abs(data[0][3]) > 0.5:  # Check local_dy for potential lateral error
+                #     self.get_logger().info('Lateral error detected, using turn model for prediction.')
+                #     predicted_vel = self.turn_model(input_tensor)
+                else:
+                    self.get_logger().info('Straight driving detected, using velocity model for prediction.')
+                    predicted_vel = self.vel_predictor(input_tensor)
             predicted_vel = predicted_vel.detach().cpu().numpy().flatten().tolist()
 
             # predicted_vel = denormalize(predicted_vel)
@@ -99,6 +120,11 @@ class ControlCarNode(Node):
             self.rear_wheel_pub.publish(msg)
             self.front_wheel_pub.publish(msg)
             self.get_logger().info(f'Published predicted velocities: {predicted_vel}')
+
+            # y_error = data[0][3]  # local_dy
+            # if abs(y_error) > self.y_error:
+            #     self.y_error = y_error
+            # self.get_logger().warning(f'Current y_error: {y_error}, Max y_error: {self.y_error}')
 
     def compute_angle(self, qx, qy, qz, qw):
         # Convert quaternion to yaw angle in radians

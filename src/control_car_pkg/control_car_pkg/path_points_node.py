@@ -18,10 +18,9 @@ class PathPointsNode(Node):
         # Store the received path point
         data = msg.data # [idx, x, y, angle]
         if len(data) >= 10:
-            point_1 = NearestPoint(x=data[1], y=data[2], angle=data[3])
-            point_2 = NearestPoint(x=data[4], y=data[5], angle=data[6])
-            point_3 = NearestPoint(x=data[7], y=data[8], angle=data[9])
-            self.nearest_points = [point_1, point_2, point_3]
+            for i in range(0, 3):
+                setattr(self, f'point_{i}', NearestPoint(x=data[1 + i*3], y=data[2 + i*3], angle=data[3 + i*3]))
+            self.nearest_points = [getattr(self, f'point_{i}') for i in range(3)]
         # self.get_logger().info(f'Received Nearest Path Point: {self.nearest_point}')
 
 class NearestPoint:
