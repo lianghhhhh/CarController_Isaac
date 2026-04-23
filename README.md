@@ -1,5 +1,6 @@
 # CarController_Isaac
-use a nn model to control a car run on a path in Isaac Sim
+use a nn model to control a car run on a path in Isaac Sim\
+use path generator model to generate path that can avoid obstacles, then use a nn model to control car to run on
 
 ## Environment
 WSL Ubuntu 22.04.5 LTS + Windows Isaac Sim 4.5.0
