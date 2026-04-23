@@ -1,7 +1,9 @@
 import os
 import csv
+import math
 import numpy as np
 from rclpy.node import Node
+from collections import deque
 
 class CollectPathNode(Node):
     def __init__(self, car_state_node, path_points_node, wheel_vel_node, target_vel_node, planned_points_node, obstacles_node):
@@ -14,19 +16,23 @@ class CollectPathNode(Node):
         self.obstacles_node = obstacles_node
         self.get_logger().info('CollectPathNode has been started.')
 
+        self.data_index = 0
+        self.delay_buffer = deque(maxlen=60) # 3 sec data
+
         home_dir = os.path.expanduser('~')
-        self.filepath = os.path.join(home_dir, 'CarController_Isaac', 'pathData.csv')
+        self.filepath = os.path.join(home_dir, 'CarController_Isaac', 'pathData_20_5.csv')
         with open(self.filepath, mode='w', newline='') as file:
             writer = csv.writer(file)
             header = [
+                'data_index',
                 'vel_left', 'vel_right',
                 'pos_x', 'pos_y', 'angle'
             ]
-            for i in range(10):
+            for i in range(20):
                 header.extend([f'target_x_{i}', f'target_y_{i}', f'target_angle_{i}'])
-            for i in range(5):
-                header.extend([f'obstacle_x_{i}', f'obstacle_y_{i}', f'obstacle_radius_{i}'])
-            for i in range(3):
+            for i in range(10):
+                header.extend([f'obstacle_flag_{i}', f'obstacle_x_{i}', f'obstacle_y_{i}'])
+            for i in range(20):
                 header.extend([f'planned_x_{i}', f'planned_y_{i}', f'planned_angle_{i}'])
             writer.writerow(header)
 
@@ -64,8 +70,27 @@ class CollectPathNode(Node):
 
         if position and orientation and nearest_points and wheel_velocities and target_velocities and planned_points and obstacles:
             self.get_logger().info('Collecting path data...')
+            # is_bad_data = False # detect if is bad data
+
             pos_x = position.x
             pos_y = position.y
+
+            # # check if collision happens
+            # if obstacles and not is_bad_data:
+            #     for obstacle in obstacles:
+            #         if obstacle.flag == 1.0:  # Only consider valid obstacles
+            #             distance = math.hypot(pos_x - obstacle.x, pos_y - obstacle.y)
+            #             if distance < 0.4:  # Assuming 0.6m is the collision threshold (car width + obs size)
+            #                 is_bad_data = True
+            #                 self.get_logger().warn(f'Collision detected with obstacle at ({obstacle.x}, {obstacle.y}), distance: {distance:.2f}m.')
+            #                 break
+            
+            # # handle bad data
+            # if is_bad_data:
+            #     self.delay_buffer.clear()
+            #     self.data_index += 1
+            #     return
+
             angle = self.compute_angle(
                 orientation.x,
                 orientation.y,
@@ -73,52 +98,53 @@ class CollectPathNode(Node):
                 orientation.w
             )
 
-            for i in range(10):
-                setattr(self, f'target_x_{i}', nearest_points[i].x)
-                setattr(self, f'target_y_{i}', nearest_points[i].y)
-                setattr(self, f'target_angle_{i}', nearest_points[i].angle)
-
-            for i in range(5):
-                setattr(self, f'obstacle_x_{i}', obstacles[i].x)
-                setattr(self, f'obstacle_y_{i}', obstacles[i].y)
-                setattr(self, f'obstacle_radius_{i}', obstacles[i].radius)
-
-            for i in range(3):
-                setattr(self, f'planned_x_{i}', planned_points[i].x)
-                setattr(self, f'planned_y_{i}', planned_points[i].y)
-                setattr(self, f'planned_angle_{i}', planned_points[i].angle)
-
             vel_left = wheel_velocities.get('Revolute_3', 0.0)
             vel_right = wheel_velocities.get('Revolute_4', 0.0)
 
             # target_vel_left = target_velocities[0]  # Assuming index 0 is left wheel
             # target_vel_right = target_velocities[1]  # Assuming index 1 is right wheel
 
-            with open(self.filepath, mode='a', newline='') as file:
-                writer = csv.writer(file)
-                row = [
-                    vel_left, vel_right,
-                    pos_x, pos_y, angle
-                ]
-                for i in range(10):
-                    row.extend([
-                        getattr(self, f'target_x_{i}'),
-                        getattr(self, f'target_y_{i}'),
-                        getattr(self, f'target_angle_{i}')
-                    ])
-                for i in range(5):
-                    row.extend([
-                        getattr(self, f'obstacle_x_{i}'),
-                        getattr(self, f'obstacle_y_{i}'),
-                        getattr(self, f'obstacle_radius_{i}')
-                    ])
-                for i in range(3):
-                    row.extend([
-                        getattr(self, f'planned_x_{i}'),
-                        getattr(self, f'planned_y_{i}'),
-                        getattr(self, f'planned_angle_{i}')
-                    ])
-                writer.writerow(row)
+            row = [
+                self.data_index,
+                vel_left, vel_right,
+                pos_x, pos_y, angle
+            ]
+
+            for i in range(20):
+                row.extend([
+                    nearest_points[i].x,
+                    nearest_points[i].y,
+                    nearest_points[i].angle
+                ])
+            
+            # if has no valid obstacle, randomly skip this data and do not add to buffer
+            obs_count = 0
+            for i in range(10):
+                if obstacles[i].flag == 1.0:  # Only consider valid obstacles
+                    obs_count += 1
+                row.extend([
+                    obstacles[i].flag,
+                    obstacles[i].x,
+                    obstacles[i].y
+                ])
+            if obs_count == 0 and np.random.rand() < 0.5:  # 50% chance to skip data without valid obstacles
+                return
+            
+            for i in range(20):
+                row.extend([
+                    planned_points[i].x,
+                    planned_points[i].y,
+                    planned_points[i].angle
+                ])
+
+            # add every row to buffer, and write to csv when buffer is full
+            self.delay_buffer.append(row)
+            if len(self.delay_buffer) == self.delay_buffer.maxlen:
+                safe_row = self.delay_buffer.popleft()
+                with open(self.filepath, mode='a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(safe_row)
+
 
     def compute_angle(self, qx, qy, qz, qw):
         # Convert quaternion to Euler angles (roll, pitch, yaw)

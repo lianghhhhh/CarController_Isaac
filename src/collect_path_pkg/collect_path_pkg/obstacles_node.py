@@ -16,16 +16,16 @@ class ObstaclesNode(Node):
 
     def obstacles_callback(self, msg):
         # Store the received obstacles data
-        data = msg.data # [x, y, radius]
-        if len(data) >= 15:
-            for i in range(0, 5):
-                setattr(self, f'obstacle_{i}', Obstacle(x=data[i*3], y=data[i*3 + 1], radius=data[i*3 + 2]))
-            self.obstacles = [getattr(self, f'obstacle_{i}') for i in range(5)]
+        data = msg.data # [flag, x, y]
+        if len(data) >= 30:
+            for i in range(0, 10):
+                setattr(self, f'obstacle_{i}', Obstacle(flag=data[i*3], x=data[i*3 + 1], y=data[i*3 + 2]))
+            self.obstacles = [getattr(self, f'obstacle_{i}') for i in range(10)]
         # self.get_logger().info(f'Received Obstacles Data: {self.obstacles}')
 
 
 class Obstacle:
-    def __init__(self, x=0.0, y=0.0, radius=0.0):
+    def __init__(self, flag=0, x=0.0, y=0.0):
+        self.flag = flag
         self.x = x
         self.y = y
-        self.radius = radius

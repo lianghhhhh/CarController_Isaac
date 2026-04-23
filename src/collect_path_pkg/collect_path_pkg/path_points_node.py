@@ -15,12 +15,12 @@ class PathPointsNode(Node):
         self.get_logger().info('PathPointsNode has been started.')
 
     def path_points_callback(self, msg):
-        # Store the received path point (10 points)
+        # Store the received path point (20 points)
         data = msg.data # [idx, x, y, angle]
-        if len(data) >= 31:
-            for i in range(0, 10):
+        if len(data) >= 61:
+            for i in range(0, 20):
                 setattr(self, f'point_{i}', NearestPoint(x=data[1 + i*3], y=data[2 + i*3], angle=data[3 + i*3]))
-            self.nearest_points = [getattr(self, f'point_{i}') for i in range(10)]
+            self.nearest_points = [getattr(self, f'point_{i}') for i in range(20)]
         # self.get_logger().info(f'Received Nearest Path Point: {self.nearest_point}')
 
 class NearestPoint:
