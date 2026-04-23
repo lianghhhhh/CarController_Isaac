@@ -19,6 +19,6 @@ colcon build
 
 ## Isaac Sim
 1. run ***isaac-sim.selector.bat***
-2. pull ***pros_car.usd*** into Isaac Sim
+2. pull ***pros_car.usd*** (USD files in isaac_scene folder) into Isaac Sim
 3. at Stage on the right, click ***base_link*** & ***BasisCurves***
 4. press ***Play***
